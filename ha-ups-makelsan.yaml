@@ -1,0 +1,247 @@
+substitutions:
+  platform: ESP8266
+  board: d1_mini
+  deviceName: ha-ups-makelsan
+  deviceFriendlyName: HA Makelsan UPS
+
+<<: !include common/device_base.yaml
+
+esphome:
+  includes:
+    - common/scripts/uart/UPS-Makelsan.h
+
+uart:
+  id: uart_bus
+  rx_pin: RX
+  tx_pin: TX
+  baud_rate: 2400
+  data_bits: 8
+  stop_bits: 1
+  parity: none
+
+globals:
+  - id: uart_data_queue_value
+    type: bool
+    restore_value: false
+    initial_value: 'true'
+
+interval:
+- interval: 1s
+  then:
+  - if:
+      condition:
+          - lambda:
+              'return id(uart_data_queue_value);'
+      then:
+      - uart.write:
+          id: uart_bus
+          data: [0x46, 0x0d] # F.
+      - globals.set:
+          id: uart_data_queue_value
+          value: 'false'
+      else:
+      - uart.write:
+          id: uart_bus
+          data: [0x51, 0x31, 0x0d] # Q1.
+      - globals.set:
+          id: uart_data_queue_value
+          value: 'true'
+
+#interval:
+#  - interval: 1s
+#    then:
+#     - if:
+#        condition:  
+#           wifi.connected:
+#        then:
+#         - if:
+#            condition:
+#              - lambda:
+#                  'return id(uart_data_queue_value);'
+#            then:
+#            - uart.write:
+#                id: uart_bus
+#                data: [0x46, 0x0d] # F.
+#            - globals.set:
+#                id: uart_data_queue_value
+#                value: 'false'
+#            else:
+#            - uart.write:
+#                id: uart_bus
+#                data: [0x51, 0x31, 0x0d] # Q1.
+#            - globals.set:
+#                id: uart_data_queue_value
+#                value: 'true'
+
+custom_component:
+  lambda: |-
+    MakelsanUPS *uart_data_ups = new MakelsanUPS(id(uart_bus));
+    return {uart_data_ups};
+  components:
+  - id: uart_data_ups
+
+binary_sensor:
+- platform: custom
+  lambda: |-
+    MakelsanUPS *ups_binary_sensor = (MakelsanUPS*) id(uart_data_ups);
+    return {
+        ups_binary_sensor->battery_low
+        ,ups_binary_sensor->beeper_on
+        ,ups_binary_sensor->eco_mode
+        ,ups_binary_sensor->power_status
+        ,ups_binary_sensor->shutdown_active
+        ,ups_binary_sensor->test_in_progress
+        ,ups_binary_sensor->ups_failed
+        ,ups_binary_sensor->ups_type_is_standby
+        ,ups_binary_sensor->utility_fail
+    };
+  binary_sensors:
+  - name: "Battery Low"
+    device_class: "battery"
+  - name: "Beeper"
+    icon: mdi:bell-ring
+  - name: "Eco Mode"
+    icon: mdi:leaf-circle
+  - name: "Power Status"
+    device_class: "power"
+  - name: "Shutdown Active"
+    icon: mdi:power
+  - name: "Test in Progress"
+    icon: mdi:test-tube
+  - name: "UPS Failed"
+    icon: mdi:battery-alert
+  - name: "UPS Type is Standby"
+    icon: mdi:power-standby
+  - name: "Utility Fail"
+    icon: mdi:alert
+
+sensor:
+- platform: total_daily_energy
+  name: Daily Energy
+  power_id: output_power
+  unit_of_measurement: 'kWh'
+  filters:
+  - multiply: 0.001
+- platform: custom
+  lambda: |-
+    MakelsanUPS *ups_sensor = (MakelsanUPS*) id(uart_data_ups);
+    return {
+        ups_sensor->battery_capacity
+        ,ups_sensor->battery_voltage
+        ,ups_sensor->battery_voltage_current
+        ,ups_sensor->internal_tempeture
+        ,ups_sensor->output_current
+        ,ups_sensor->output_power
+        ,ups_sensor->raiting_current
+        ,ups_sensor->raiting_voltage
+        ,ups_sensor->voltage_frequency
+        ,ups_sensor->voltage_input
+        ,ups_sensor->voltage_input_fault
+        ,ups_sensor->voltage_input_frequency
+        ,ups_sensor->voltage_output
+    };
+  sensors:
+  - name: "Battery Capacity"
+    device_class: "battery"
+    unit_of_measurement: "%"
+    accuracy_decimals: 0
+  - name: "Battery Voltage"
+    unit_of_measurement: "V"
+    device_class: "voltage"
+    accuracy_decimals: 1
+  - name: "Battery Voltage Current"
+    unit_of_measurement: "V"
+    device_class: "current"
+    accuracy_decimals: 1
+  - name: "Internal Tempeture"
+    unit_of_measurement: "°C"
+    device_class: "temperature"
+    accuracy_decimals: 0
+  - name: "Output Current"
+    device_class: "power_factor"
+    unit_of_measurement: "%"
+    accuracy_decimals: 0
+  - name: "Output Power"
+    id: output_power
+    device_class: "power"
+    unit_of_measurement: "W"
+    accuracy_decimals: 0
+  - name: "Raiting Current"
+    unit_of_measurement: "V"
+    device_class: "current"
+    accuracy_decimals: 1
+  - name: "Raiting Voltage"
+    unit_of_measurement: "V"
+    device_class: "voltage"
+    accuracy_decimals: 1
+  - name: "Voltage Frequency"
+    icon: mdi:cosine-wave
+    unit_of_measurement: "Hz"
+    accuracy_decimals: 1
+  - name: "Voltage Input"
+    unit_of_measurement: "VAC"
+    device_class: "voltage"
+    accuracy_decimals: 1
+  - name: "Voltage Input Fault"
+    unit_of_measurement: "OV"
+    device_class: "voltage"
+    accuracy_decimals: 1
+  - name: "Voltage Input Frequency"
+    icon: mdi:cosine-wave
+    unit_of_measurement: "Hz"
+    accuracy_decimals: 1
+  - name: "Voltage Output"
+    unit_of_measurement: "VAC"
+    device_class: "voltage"
+    accuracy_decimals: 1
+
+switch:
+- platform: uart
+  name: Beeper Toggle On/Off
+  icon: mdi:bell-ring
+  data: [0x51, 0x0d] # "Q."
+- platform: uart
+  name: Test
+  icon: mdi:test-tube
+  data: [0x54, 0x0d] # "T."
+- platform: uart
+  name: Test - Cancel
+  icon: mdi:test-tube-off
+  data: [0x43, 0x54, 0x0d] # "CT."
+- platform: uart
+  name: Test - For Specified Time Period(Minutes 30)
+  icon: mdi:test-tube
+  data: [0x54, 0x33, 0x30, 0x0d] # "T30."
+- platform: uart
+  name: Test - Until Battery Low
+  icon: mdi:test-tube
+  data: [0x54, 0x4c, 0x0d] # "TL."
+- platform: uart
+  name: Shutdown 5 Minutes Later
+  icon: mdi:power
+  data: [0x53, 0x30, 0x35, 0x0d] # "S05."
+- platform: uart
+  name: Shutdown 5 Minutes Later and Restore 1 Minute Later
+  icon: mdi:power
+  data: [0x53, 0x30, 0x35, 0x52, 0x30, 0x31 , 0x0d] # "S05R01."
+- platform: uart
+  name: Shutdown Cancel
+  icon: mdi:alert-octagon-outline
+  data: [0x43, 0x0d] # "S05."
+
+text_sensor:
+- platform: custom
+  lambda: |-
+    MakelsanUPS *ups_text_sensor = (MakelsanUPS*) id(uart_data_ups);
+    return {
+        ups_text_sensor->power_type
+        ,ups_text_sensor->ups_type
+    };
+  text_sensors:
+  - name: "Power Type"
+    icon: mdi:power-socket-eu
+  - name: "UPS Type"
+    icon: mdi:car-battery
+
+time:
+- platform: homeassistant
