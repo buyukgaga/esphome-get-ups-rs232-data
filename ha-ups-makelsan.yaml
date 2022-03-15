@@ -4,11 +4,34 @@ substitutions:
   deviceName: ha-ups-makelsan
   deviceFriendlyName: HA Makelsan UPS
 
-<<: !include common/device_base.yaml
+esphome:
+  name: ha-ups-makelsan
+  platform: ESP8266
+  board: d1_mini
+
+wifi:
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "HA Makelsan UPS Hotspot"
+    password: "1234"
+  ssid: !secret wifi_1_ssid
+  password: !secret wifi_1_password
+
+captive_portal:
+
+logger:
+  level: NONE
+  baud_rate: 0
 
 esphome:
   includes:
     - common/scripts/uart/UPS-Makelsan.h
+
+api:
+  password: !secret esphome_api_password
+
+ota:
+  password: !secret esphome_api_password
 
 uart:
   id: uart_bus
