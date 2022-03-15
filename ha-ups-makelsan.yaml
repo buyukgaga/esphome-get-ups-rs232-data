@@ -47,32 +47,6 @@ interval:
           id: uart_data_queue_value
           value: 'true'
 
-#interval:
-#  - interval: 1s
-#    then:
-#     - if:
-#        condition:  
-#           wifi.connected:
-#        then:
-#         - if:
-#            condition:
-#              - lambda:
-#                  'return id(uart_data_queue_value);'
-#            then:
-#            - uart.write:
-#                id: uart_bus
-#                data: [0x46, 0x0d] # F.
-#            - globals.set:
-#                id: uart_data_queue_value
-#                value: 'false'
-#            else:
-#            - uart.write:
-#                id: uart_bus
-#                data: [0x51, 0x31, 0x0d] # Q1.
-#            - globals.set:
-#                id: uart_data_queue_value
-#                value: 'true'
-
 custom_component:
   lambda: |-
     MakelsanUPS *uart_data_ups = new MakelsanUPS(id(uart_bus));
