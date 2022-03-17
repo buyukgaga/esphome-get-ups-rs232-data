@@ -14,13 +14,12 @@ wifi:
   ap:
     ssid: "HA Makelsan UPS Hotspot"
     password: "1234"
-  ssid: !secret wifi_1_ssid
-  password: !secret wifi_1_password
+  ssid: "WiFi SSID"
+  password: "WiFi Password"
 
 captive_portal:
 
 logger:
-  level: NONE
   baud_rate: 0
 
 esphome:
