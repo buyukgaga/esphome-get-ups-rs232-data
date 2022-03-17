@@ -146,7 +146,7 @@ public:
 					sensor(battery_capacity, get_battery_capacity(battery_voltage_float));
 					sensor(battery_voltage_current, battery_voltage_float);
 					binarySensor(power_status, (voltage_input->state == 0 ? false : true));
-					sensor(output_power, (output_current->state * 6.111111));
+					sensor(output_power, (output_current->state * 6.25));
 					textSensor(power_type, (char*)(voltage_input->state > 0 ? "AC Utility Power" : "Battery Power"));
 					textSensor(ups_type, (char*)(voltage_input->state > 0 ? "On-Line" : "Normal"));
 					break;
