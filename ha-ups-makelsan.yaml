@@ -24,7 +24,7 @@ logger:
 
 esphome:
   includes:
-    - common/scripts/uart/UPS-Makelsan.h
+    - UPS-Makelsan.h
 
 api:
   password: !secret esphome_api_password
